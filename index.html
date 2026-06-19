@@ -1,0 +1,392 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+#root{width:100%;min-height:600px;position:relative;overflow:hidden;background:#f0f0f0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+#road-view{width:100%;height:420px;position:relative;overflow:hidden;background:#c8e6c9}
+.cloud{position:absolute;width:60px;height:22px;background:white;border-radius:40px;opacity:0.75}
+.cloud::before{content:'';position:absolute;width:30px;height:30px;background:white;border-radius:50%;top:-14px;left:10px}
+.cloud::after{content:'';position:absolute;width:20px;height:20px;background:white;border-radius:50%;top:-10px;left:28px}
+.cloud.c1{top:30px;animation:cloudmove 18s linear infinite}
+.cloud.c2{top:60px;width:45px;height:16px;animation:cloudmove 24s linear infinite 6s}
+.cloud.c2::before{width:22px;height:22px;top:-10px;left:8px}
+.cloud.c2::after{width:15px;height:15px;top:-7px;left:20px}
+@keyframes cloudmove{from{left:-80px}to{left:110%}}
+.node{position:absolute;bottom:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px}
+.node-circle{width:44px;height:44px;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:18px;transition:transform 0.2s;box-shadow:0 2px 6px rgba(0,0,0,0.18)}
+.node-circle.locked{filter:grayscale(0.7);opacity:0.6}
+.node-circle.done{background:#4caf50!important;border-color:#81c784}
+.node-circle.active{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 2px 8px rgba(0,0,0,0.18)}50%{transform:scale(1.12);box-shadow:0 4px 16px rgba(0,0,0,0.22)}}
+.node-label{font-size:11px;font-weight:500;color:#37474f;background:white;padding:2px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.12)}
+#char{position:absolute;bottom:52px;font-size:32px;transition:left 0.9s cubic-bezier(.4,0,.2,1);z-index:10;transform:translateX(-50%);filter:drop-shadow(0 2px 2px rgba(0,0,0,0.18))}
+#char-shadow{position:absolute;bottom:50px;width:28px;height:8px;background:rgba(0,0,0,0.12);border-radius:50%;transition:left 0.9s cubic-bezier(.4,0,.2,1);z-index:9;transform:translateX(-50%)}
+.tree{position:absolute;font-size:28px;pointer-events:none;user-select:none}
+#world{position:absolute;top:0;left:0;height:100%;width:2400px;transition:transform 0.9s cubic-bezier(.4,0,.2,1)}
+#top-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#ffffff;border-bottom:2px solid #d0d0d0}
+#prog-wrap{flex:1;height:8px;background:var(--color-background-secondary);border-radius:6px;overflow:hidden}
+#prog-fill{height:100%;background:#4caf50;border-radius:6px;transition:width 0.6s ease;width:0%}
+#score-badge{font-size:13px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap}
+#ronde-badge{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--color-background-info);color:var(--color-text-info);white-space:nowrap}
+#q-panel{background:#ffffff;border-top:2px solid #d0d0d0;padding:16px;min-height:220px}
+.q-ronde-tag{font-size:11px;color:var(--color-text-tertiary);letter-spacing:0.5px;margin-bottom:6px}
+.q-text{font-size:15px;font-weight:500;color:var(--color-text-primary);line-height:1.55;margin-bottom:12px}
+.q-hint{font-size:12px;color:var(--color-text-secondary);margin-bottom:12px;font-style:italic}
+.opts{display:grid;gap:7px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opt{background:#FFFACD;border:2px solid #d0d0d0;border-radius:var(--border-radius-md);padding:10px 14px;font-size:13px;font-weight:400;color:#333333;cursor:pointer;text-align:left;line-height:1.4;transition:border-color 0.15s,background 0.15s;display:flex;align-items:center;gap:8px}
+.opt:hover{border-color:#b0b0b0;background:#FFF8A3}
+.opt.correct{background:var(--color-background-success);border-color:var(--color-border-success);color:var(--color-text-success)}
+.opt.wrong{background:var(--color-background-danger);border-color:var(--color-border-danger);color:var(--color-text-danger)}
+.opt.dim{opacity:0.4;pointer-events:none}
+.opt-key{font-size:11px;font-weight:500;min-width:20px;text-align:center;opacity:0.6}
+.scale-row{display:flex;gap:6px;justify-content:center;margin:4px 0 8px}
+.scale-b{flex:1;padding:10px 4px;border:2px solid #d0d0d0;border-radius:var(--border-radius-md);background:#ffffff;font-size:14px;font-weight:500;cursor:pointer;text-align:center;color:#333333;transition:border-color 0.15s}
+.scale-b:hover{border-color:var(--color-border-primary)}
+.scale-b.sel{background:var(--color-background-info);border-color:var(--color-border-info);color:var(--color-text-info)}
+.scale-ends{display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-tertiary);font-style:italic;margin-bottom:8px}
+#feedback{font-size:13px;line-height:1.6;padding:10px 12px;border-radius:var(--border-radius-md);margin:10px 0;display:none}
+#feedback.ok{background:var(--color-background-success);color:var(--color-text-success)}
+#feedback.no{background:var(--color-background-danger);color:var(--color-text-danger)}
+#feedback.neutral{background:var(--color-background-info);color:var(--color-text-info)}
+#btn-next{width:100%;padding:10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);font-size:13px;font-weight:500;cursor:pointer;color:var(--color-text-primary);display:none;margin-top:4px;transition:background 0.15s}
+#btn-next:hover{background:var(--color-background-secondary)}
+#intro-screen,#result-screen{padding:20px 16px;text-align:center}
+#intro-screen h2{font-size:20px;font-weight:500;margin-bottom:8px;color:var(--color-text-primary)}
+#intro-screen p{font-size:14px;color:var(--color-text-secondary);line-height:1.6;max-width:480px;margin:0 auto 20px}
+.start-btn{background:var(--color-background-success);color:var(--color-text-success);border:0.5px solid var(--color-border-success);border-radius:var(--border-radius-lg);padding:12px 32px;font-size:15px;font-weight:500;cursor:pointer;transition:opacity 0.15s}
+.start-btn:hover{opacity:0.85}
+.info-row{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+.info-pill{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:8px 16px;font-size:13px;color:var(--color-text-secondary)}
+.info-pill strong{color:var(--color-text-primary)}
+.result-profile{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:20px;margin:14px 0;text-align:left}
+.result-profile h3{font-size:16px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px}
+.result-profile p{font-size:13px;color:var(--color-text-secondary);line-height:1.65}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.stat-box{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 8px;text-align:center}
+.stat-num{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.stat-lbl{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.takeaway-list{text-align:left;margin:12px 0}
+.takeaway-list li{font-size:13px;color:var(--color-text-secondary);margin-bottom:8px;padding-left:4px;line-height:1.55;list-style:none;display:flex;gap:8px}
+.takeaway-list li i{color:var(--color-text-success);flex-shrink:0;margin-top:2px}
+#restart-btn{margin-top:14px;padding:10px 28px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);font-size:13px;cursor:pointer;color:var(--color-text-primary)}
+.hidden{display:none!important}
+</style>
+
+<h2 class="sr-only">Game pre-assessment: Kecerdasan Artifisial dalam pembelajaran untuk guru SMK. Jawab 15 pertanyaan sambil berjalan di jalanan digital.</h2>
+
+<div id="intro-screen">
+  <div style="font-size:48px;margin-bottom:12px">🏫</div>
+  <h2>Perjalanan Menuju Kelas Digital</h2>
+  <p>Ikuti perjalanan di jalanan digital dan jawab 15 pertanyaan tentang Kecerdasan Artifisial dalam pembelajaran. Gurumu akan berjalan maju di setiap jawaban — sampai tiba di garis finis!</p>
+  <div class="info-row">
+    <div class="info-pill"><strong>15</strong> pertanyaan</div>
+    <div class="info-pill"><strong>3</strong> ronde</div>
+    <div class="info-pill"><strong>±8</strong> menit</div>
+  </div>
+  <button class="start-btn" onclick="startGame()"><i class="ti ti-player-play" aria-hidden="true"></i> Mulai Perjalanan</button>
+</div>
+
+<div id="game-screen" class="hidden">
+  <div id="top-bar">
+    <div id="ronde-badge">Ronde 1</div>
+    <div id="prog-wrap"><div id="prog-fill"></div></div>
+    <div id="score-badge"><i class="ti ti-star" aria-hidden="true"></i> <span id="sc">0</span></div>
+  </div>
+  <div id="road-view">
+    <div id="world">
+      <div class="cloud c1"></div>
+      <div class="cloud c2" style="animation-delay:8s"></div>
+    </div>
+    <div id="char">👩‍🏫</div>
+    <div id="char-shadow"></div>
+  </div>
+  <div id="q-panel">
+    <div class="q-ronde-tag" id="q-ronde-tag"></div>
+    <div class="q-text" id="q-text"></div>
+    <div class="q-hint" id="q-hint"></div>
+    <div id="opts-area"></div>
+    <div id="feedback"></div>
+    <button id="btn-next" onclick="nextQ()"></button>
+  </div>
+</div>
+
+<div id="result-screen" class="hidden">
+  <div style="font-size:52px;margin-bottom:6px" id="res-emoji">🏆</div>
+  <h2 style="font-size:20px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px" id="res-name">—</h2>
+  <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:14px">Profil guru digitalmu</p>
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num" id="res-score">0</div><div class="stat-lbl">Total poin</div></div>
+    <div class="stat-box"><div class="stat-num" id="res-correct">0/10</div><div class="stat-lbl">Jawaban benar</div></div>
+    <div class="stat-box"><div class="stat-num" id="res-level">—</div><div class="stat-lbl">Level kesiapan</div></div>
+  </div>
+  <div class="result-profile"><h3 id="res-title">—</h3><p id="res-desc">—</p></div>
+  <div class="takeaway-list" id="takeaway-list"></div>
+  <button id="restart-btn" onclick="restart()"><i class="ti ti-refresh" aria-hidden="true"></i> Coba lagi</button>
+</div>
+
+<script>
+const QS=[
+  {r:1,type:'mc',q:'Apa yang dimaksud dengan Kecerdasan Artifisial Generatif?',hint:'Jenis Kecerdasan Artifisial yang paling banyak dibicarakan saat ini.',opts:['Kecerdasan Artifisial yang hanya menjawab ya/tidak','Kecerdasan Artifisial yang bisa membuat konten baru: teks, gambar, atau audio','Kecerdasan Artifisial yang hanya bekerja di robot fisik','Kecerdasan Artifisial khusus untuk pengolahan data angka'],ans:1,ok:'Tepat! Kecerdasan Artifisial Generatif menghasilkan konten baru — teks, gambar, audio — dari pola yang dipelajari data besar. ChatGPT adalah contoh utamanya.',no:'Kecerdasan Artifisial Generatif adalah yang mampu menghasilkan konten baru (teks, gambar, audio). ChatGPT dan DALL-E adalah contohnya.'},
+  {r:1,type:'mc',q:'Apa itu Large Language Model (LLM)?',hint:'LLM adalah "mesin" di balik tools seperti ChatGPT.',opts:['Perangkat keras khusus komputer Kecerdasan Artifisial','Algoritma yang mengenali dan memprediksi pola bahasa','Aplikasi pembelajaran online untuk siswa SD','Kamera Kecerdasan Artifisial untuk mengenali wajah'],ans:1,ok:'Benar! LLM adalah algoritma yang dilatih untuk mengenali pola dalam bahasa — inilah dapur yang membuat ChatGPT bisa merespons kita.',no:'LLM adalah algoritma yang dilatih pada data teks besar untuk mengenali dan memprediksi pola bahasa. Ini fondasi di balik tools Kecerdasan Artifisial generatif.'},
+  {r:1,type:'mc',q:'Manakah contoh Kecerdasan Artifisial kategori "Reaktif"?',hint:'Kecerdasan Artifisial reaktif merespons perintah spesifik tanpa belajar dari masa lalu.',opts:['ChatGPT yang bisa menulis esai panjang','Netflix yang merekomendasikan film sesuai selera','Siri/Alexa yang merespons perintah suara tertentu','Sistem yang memprediksi nilai siswa'],ans:2,ok:'Benar! Kecerdasan Artifisial Reaktif seperti Siri merespons input spesifik tanpa belajar dari pengalaman sebelumnya.',no:'Kecerdasan Artifisial Reaktif merespons input tertentu tanpa belajar dari masa lalu. Siri dan Alexa adalah contohnya — berbeda dari Kecerdasan Artifisial Prediktif (Netflix) atau Generatif (ChatGPT).'},
+  {r:1,type:'mc',q:'Mengapa RPP hasil Kecerdasan Artifisial TIDAK boleh langsung dipakai tanpa direvisi?',hint:'Pikirkan apa yang Kecerdasan Artifisial tidak ketahui tentang kelasmu.',opts:['Karena Kecerdasan Artifisial selalu pakai bahasa Inggris','Kecerdasan Artifisial tidak tahu konteks spesifik siswa, sekolah, dan komunitas lokal','Karena RPP dari Kecerdasan Artifisial tidak bisa disimpan di komputer','Kecerdasan Artifisial hanya bisa membuat RPP untuk mata pelajaran IPA'],ans:1,ok:'Tepat! Kecerdasan Artifisial tidak mengenal siapa siswamu, budaya lokal, atau prioritas instruksional sekolahmu. Output Kecerdasan Artifisial adalah draf awal yang wajib direvisi guru.',no:'Kecerdasan Artifisial tidak mengenal konteks spesifik kelasmu — siapa siswanya, kondisi komunitas, atau strategi pembelajaran sekolah. Output Kecerdasan Artifisial selalu butuh revisi guru.'},
+  {r:1,type:'mc',q:'Berapa usia minimum yang disyaratkan untuk menggunakan ChatGPT?',hint:'Ini penting untuk perlindungan siswa kita.',opts:['10 tahun','12 tahun','13 tahun','17 tahun'],ans:2,ok:'Benar! ChatGPT mensyaratkan pengguna minimal 13 tahun. Selalu baca syarat layanan sebelum mengintegrasikan tools Kecerdasan Artifisial ke kelas.',no:'ChatGPT mensyaratkan usia minimum 13 tahun sesuai syarat layanannya. Penting bagi guru untuk memahami ini sebelum membawa Kecerdasan Artifisial ke kelas.'},
+  {r:1,type:'mc',q:'Apa strategi terbaik sekolah dalam menghadapi Kecerdasan Artifisial?',hint:'Kecerdasan Artifisial sudah ada di mana-mana — bukan hanya satu website.',opts:['Melarang total semua perangkat di sekolah','Membuat larangan khusus untuk ChatGPT saja','Dorong eksplorasi guru, lalu integrasikan Kecerdasan Artifisial dengan panduan etika','Tunggu regulasi pemerintah dulu sebelum bertindak'],ans:2,ok:'Tepat sekali! Para ahli menyarankan eksplorasi guru terlebih dahulu, bukan larangan. Kecerdasan Artifisial sudah tertanam di jutaan platform.',no:'Melarang Kecerdasan Artifisial bukan solusi — ia sudah ada di mana-mana. Strategi terbaik: dorong eksplorasi guru dan kembangkan panduan penggunaan yang bertanggung jawab.'},
+  {r:2,type:'tf',q:'Kecerdasan Artifisial memiliki emosi, kesadaran diri, dan kemampuan membuat keputusan moral secara mandiri.',hint:'Apa yang membuat manusia berbeda dari mesin?',ans:false,ok:'Benar, pernyataan itu SALAH. Kecerdasan Artifisial tidak punya emosi atau kesadaran — ia memproses pola data. Justru inilah kenapa peran guru tetap tak tergantikan!',no:'Pernyataan ini SALAH. Kecerdasan Artifisial tidak memiliki emosi, kesadaran, atau penilaian etika mandiri. Ia hanya memproses pola statistik dari data.'},
+  {r:2,type:'tf',q:'Melarang Kecerdasan Artifisial di sekolah adalah solusi efektif karena Kecerdasan Artifisial hanyalah satu website yang bisa diblokir.',hint:'Apakah Kecerdasan Artifisial benar-benar hanya satu website?',ans:false,ok:'Benar, itu SALAH! Kecerdasan Artifisial bukan satu website — ia teknologi yang sudah tertanam di jutaan platform. Melarangnya berarti membatasi siswa dari dunia nyata.',no:'Ini SALAH. Kecerdasan Artifisial sudah tertanam di mana-mana, bukan hanya satu website. Melarang Kecerdasan Artifisial justru bisa memperlebar kesenjangan digital siswa.'},
+  {r:2,type:'tf',q:'Guru sebaiknya memperkenalkan Kecerdasan Artifisial kepada siswa SETELAH guru sendiri familiar dengan teknologi tersebut.',hint:'Mengapa urutan ini penting?',ans:true,ok:'Benar! Guru perlu mengenal tools Kecerdasan Artifisial lebih dulu sebelum membimbing siswa, agar eksplorasi berjalan aman, terarah, dan bermakna.',no:'Ini BENAR. Guru harus lebih dulu familiar dengan Kecerdasan Artifisial sebelum membawa siswa ke dalamnya. Banyak tools Kecerdasan Artifisial dilatih pada konten yang tidak cocok untuk anak-anak.'},
+  {r:2,type:'tf',q:'Output Kecerdasan Artifisial selalu akurat dan bisa langsung dipercaya sebagai sumber fakta yang sahih.',hint:'Pernahkah Kecerdasan Artifisial memberikan informasi yang ternyata salah?',ans:false,ok:'Benar, itu SALAH! Kecerdasan Artifisial bisa "berhalusinasi" — menghasilkan informasi yang terdengar meyakinkan tapi faktanya keliru. Selalu verifikasi sebelum mengajar!',no:'Ini SALAH. Kecerdasan Artifisial bisa membuat kesalahan faktual (disebut "halusinasi"). Output Kecerdasan Artifisial wajib diverifikasi dari sumber terpercaya sebelum digunakan di kelas.'},
+  {r:3,type:'scale',q:'Saya merasa percaya diri menggunakan tools Kecerdasan Artifisial (seperti ChatGPT atau Canva) untuk mempersiapkan materi ajar.',hint:'Jujur saja! Tidak ada jawaban yang salah di ronde ini.',sMin:'Belum pernah coba',sMax:'Sudah rutin pakai'},
+  {r:3,type:'scale',q:'Saya paham cara menulis "prompt" yang efektif agar Kecerdasan Artifisial menghasilkan output yang berguna untuk pembelajaran.',hint:'Prompt adalah instruksi yang kita berikan ke Kecerdasan Artifisial.',sMin:'Belum tahu sama sekali',sMax:'Sudah mahir'},
+  {r:3,type:'scale',q:'Saya sudah pernah mendiskusikan penggunaan Kecerdasan Artifisial dengan sesama guru di sekolah.',hint:'Komunitas belajar guru sangat penting dalam transisi digital.',sMin:'Belum pernah',sMax:'Sering diskusi'},
+  {r:3,type:'scale',q:'Saya merasa siap membimbing siswa menggunakan Kecerdasan Artifisial secara bertanggung jawab di kelas.',hint:'Pertimbangkan etika, keamanan data, dan berpikir kritis.',sMin:'Belum siap',sMax:'Sangat siap'},
+  {r:3,type:'scale',q:'Saya optimis bahwa Kecerdasan Artifisial akan lebih banyak membantu daripada menyulitkan pekerjaan saya sebagai guru.',hint:'Ini tentang sikap dan mindset-mu terhadap perubahan.',sMin:'Sangat khawatir',sMax:'Sangat optimis'},
+];
+
+const NODES=[
+  {id:'start',x:140,label:'Mulai',icon:'🏫',color:'#4caf50'},
+  {id:'q1',x:310,label:'Pos 1',icon:'❓',color:'#1976d2'},
+  {id:'q2',x:470,label:'Pos 2',icon:'❓',color:'#1976d2'},
+  {id:'q3',x:630,label:'Pos 3',icon:'❓',color:'#1976d2'},
+  {id:'q4',x:790,label:'Pos 4',icon:'❓',color:'#1976d2'},
+  {id:'q5',x:950,label:'Pos 5',icon:'❓',color:'#1976d2'},
+  {id:'q6',x:1110,label:'Pos 6',icon:'❓',color:'#1976d2'},
+  {id:'chk1',x:1230,label:'Ronde 2',icon:'⚡',color:'#f9a825'},
+  {id:'q7',x:1390,label:'Pos 7',icon:'❓',color:'#e65100'},
+  {id:'q8',x:1540,label:'Pos 8',icon:'❓',color:'#e65100'},
+  {id:'q9',x:1680,label:'Pos 9',icon:'❓',color:'#e65100'},
+  {id:'q10',x:1820,label:'Pos 10',icon:'❓',color:'#e65100'},
+  {id:'chk2',x:1940,label:'Ronde 3',icon:'🎯',color:'#7b1fa2'},
+  {id:'q11',x:2090,label:'Pos 11',icon:'❓',color:'#7b1fa2'},
+  {id:'q12',x:2220,label:'Pos 12',icon:'❓',color:'#7b1fa2'},
+  {id:'q13',x:2350,label:'Pos 13',icon:'❓',color:'#7b1fa2'},
+  {id:'q14',x:2480,label:'Pos 14',icon:'❓',color:'#7b1fa2'},
+  {id:'q15',x:2610,label:'Pos 15',icon:'❓',color:'#7b1fa2'},
+  {id:'end',x:2760,label:'Finis!',icon:'🏆',color:'#f9a825'},
+];
+
+const TREES=[
+  {x:70,top:140,e:'🌳'},{x:200,top:155,e:'🌲'},{x:400,top:140,e:'🌳'},
+  {x:560,top:152,e:'🌲'},{x:720,top:138,e:'🌳'},{x:880,top:148,e:'🌲'},
+  {x:1040,top:142,e:'🌳'},{x:1180,top:150,e:'🌲'},{x:1340,top:138,e:'🌳'},
+  {x:1500,top:152,e:'🌲'},{x:1640,top:140,e:'🌳'},{x:1780,top:148,e:'🌲'},
+  {x:1920,top:138,e:'🌳'},{x:2060,top:145,e:'🌲'},{x:2200,top:140,e:'🌳'},
+  {x:2340,top:150,e:'🌲'},{x:2490,top:138,e:'🌳'},{x:2640,top:145,e:'🌲'},
+  {x:2780,top:140,e:'🌳'},
+];
+
+const PROFILES=[
+  {min:0,max:30,emoji:'🌱',name:'Penjelajah Baru',level:'Pemula',desc:'Kamu baru mulai mengenal Kecerdasan Artifisial — dan itu titik awal yang sempurna. Training hari ini akan memberimu fondasi yang kuat!'},
+  {min:31,max:55,emoji:'🔭',name:'Pengamat Penasaran',level:'Berkembang',desc:'Kamu sudah melihat potensi Kecerdasan Artifisial dan mulai penasaran. Saatnya bergerak dari "tahu" menjadi "coba"!'},
+  {min:56,max:75,emoji:'⚗️',name:'Praktisi Bereksperimen',level:'Mahir',desc:'Kamu aktif mengeksplorasi Kecerdasan Artifisial! Tantangan selanjutnya: integrasikan secara sistematis dan bimbing rekan guru lain.'},
+  {min:76,max:100,emoji:'🚀',name:'Inovator Digital',level:'Ahli',desc:'Level luar biasa! Peranmu bisa lebih dari sekadar pengguna — jadilah mentor Kecerdasan Artifisial di sekolahmu.'},
+];
+
+const Q_NODES=['q1','q2','q3','q4','q5','q6','q7','q8','q9','q10','q11','q12','q13','q14','q15'];
+let state={qi:0,score:0,correct:0,scaleSum:0,scaleN:0,answered:false};
+
+function buildWorld(){
+  const w=document.getElementById('world');
+  w.innerHTML='<div class="cloud c1"></div><div class="cloud c2"></div>';
+  const g=document.createElement('div');
+  g.style.cssText='position:absolute;bottom:0;left:0;width:100%;height:60px;background:#558b2f;';
+  w.appendChild(g);
+  const r=document.createElement('div');
+  r.style.cssText='position:absolute;bottom:60px;left:0;width:100%;height:110px;background:#607d8b;';
+  w.appendChild(r);
+  const d=document.createElement('div');
+  d.style.cssText='position:absolute;bottom:109px;left:0;width:100%;height:4px;background:repeating-linear-gradient(90deg,#ffd54f 0,#ffd54f 32px,transparent 32px,transparent 56px);';
+  w.appendChild(d);
+  const sh=document.createElement('div');
+  sh.style.cssText='position:absolute;bottom:168px;left:0;width:100%;height:6px;background:rgba(0,0,0,0.08);';
+  w.appendChild(sh);
+  TREES.forEach(t=>{
+    const el=document.createElement('div');
+    el.className='tree';
+    el.style.cssText=`left:${t.x}px;top:${t.top}px;font-size:28px`;
+    el.textContent=t.e;
+    w.appendChild(el);
+  });
+  NODES.forEach(n=>{
+    const el=document.createElement('div');
+    el.className='node';
+    el.id='node-'+n.id;
+    el.style.cssText=`left:${n.x}px;bottom:62px;transform:translateX(-50%)`;
+    el.innerHTML=`<div class="node-circle locked" id="nc-${n.id}" style="background:${n.color}">${n.icon}</div><div class="node-label">${n.label}</div>`;
+    w.appendChild(el);
+  });
+  document.getElementById('nc-start').classList.remove('locked');
+  document.getElementById('nc-start').classList.add('done');
+}
+
+function moveChar(x){
+  document.getElementById('char').style.left=x+'px';
+  document.getElementById('char-shadow').style.left=x+'px';
+  const viewW=document.getElementById('road-view').offsetWidth||360;
+  let tx=Math.min(0,Math.max(viewW-2400,viewW/2-x));
+  document.getElementById('world').style.transform=`translateX(${tx}px)`;
+}
+
+function activateNode(id){
+  const nc=document.getElementById('nc-'+id);
+  if(nc){nc.classList.remove('locked');nc.classList.add('active');}
+}
+function doneNode(id){
+  const nc=document.getElementById('nc-'+id);
+  if(nc){nc.classList.remove('active','locked');nc.classList.add('done');}
+}
+
+function updateProgress(){
+  document.getElementById('prog-fill').style.width=Math.round(state.qi/QS.length*100)+'%';
+  document.getElementById('sc').textContent=state.score;
+  const r=state.qi<6?1:state.qi<10?2:3;
+  const labels=['','Ronde 1: Pengetahuan','Ronde 2: Benar/Salah','Ronde 3: Kesiapanmu'];
+  document.getElementById('ronde-badge').textContent=labels[r];
+}
+
+function renderQ(){
+  if(state.qi>=QS.length){finishGame();return;}
+  const q=QS[state.qi];
+  state.answered=false;
+  const nodeId=Q_NODES[state.qi];
+  const node=NODES.find(n=>n.id===nodeId);
+  if(node)moveChar(node.x);
+  activateNode(nodeId);
+  updateProgress();
+  document.getElementById('q-ronde-tag').textContent=q.r===1?'RONDE 1 — PILIHAN GANDA':q.r===2?'RONDE 2 — BENAR / SALAH':'RONDE 3 — SKALA KESIAPAN';
+  document.getElementById('q-text').textContent=q.q;
+  document.getElementById('q-hint').textContent='💭 '+q.hint;
+  document.getElementById('feedback').style.display='none';
+  document.getElementById('btn-next').style.display='none';
+  let html='';
+  if(q.type==='mc'){
+    html='<div class="opts">';
+    ['A','B','C','D'].forEach((k,i)=>{html+=`<button class="opt" onclick="answerMC(${i})"><span class="opt-key">${k}</span>${q.opts[i]}</button>`;});
+    html+='</div>';
+  } else if(q.type==='tf'){
+    html='<div class="opts two"><button class="opt" onclick="answerTF(true)" id="opt-t"><i class="ti ti-check" aria-hidden="true"></i> Benar</button><button class="opt" onclick="answerTF(false)" id="opt-f"><i class="ti ti-x" aria-hidden="true"></i> Salah</button></div>';
+  } else {
+    html=`<div class="scale-ends"><span>${q.sMin}</span><span>${q.sMax}</span></div><div class="scale-row">${[1,2,3,4,5].map(n=>`<button class="scale-b" onclick="answerScale(${n})">${n}</button>`).join('')}</div>`;
+  }
+  document.getElementById('opts-area').innerHTML=html;
+}
+
+function showFeedback(correct,text){
+  const fb=document.getElementById('feedback');
+  fb.className='feedback '+(correct===null?'neutral':correct?'ok':'no');
+  fb.textContent=text;
+  fb.style.display='block';
+  const btn=document.getElementById('btn-next');
+  btn.textContent=state.qi===QS.length-1?'Lihat hasilku →':'Lanjutkan →';
+  btn.style.display='block';
+}
+
+function lockOpts(){document.querySelectorAll('.opt,.scale-b').forEach(b=>b.disabled=true);}
+
+function answerMC(i){
+  if(state.answered)return;
+  state.answered=true;lockOpts();
+  const q=QS[state.qi];
+  const ok=i===q.ans;
+  document.querySelectorAll('.opt').forEach((b,idx)=>{
+    if(idx===q.ans)b.classList.add('correct');
+    else if(idx===i&&!ok)b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  if(ok){state.score+=10;state.correct++;}
+  doneNode(Q_NODES[state.qi]);
+  showFeedback(ok,ok?q.ok:q.no);
+}
+
+function answerTF(val){
+  if(state.answered)return;
+  state.answered=true;lockOpts();
+  const q=QS[state.qi];
+  const ok=val===q.ans;
+  const tB=document.getElementById('opt-t');
+  const fB=document.getElementById('opt-f');
+  if(q.ans===true)tB.classList.add('correct');else fB.classList.add('correct');
+  if(!ok){if(val===true)tB.classList.add('wrong');else fB.classList.add('wrong');}
+  if(ok){state.score+=10;state.correct++;}
+  doneNode(Q_NODES[state.qi]);
+  showFeedback(ok,ok?q.ok:q.no);
+}
+
+function answerScale(v){
+  if(state.answered)return;
+  state.answered=true;lockOpts();
+  document.querySelectorAll('.scale-b').forEach((b,i)=>{if(i+1===v)b.classList.add('sel');});
+  state.scaleSum+=v;state.scaleN++;state.score+=v*2;
+  doneNode(Q_NODES[state.qi]);
+  const msgs={1:'Terima kasih sudah jujur — training ini memang dirancang untuk semua level!',2:'Bagus! Rasa ingin tahu itu modal utama belajar.',3:'Mantap, kamu sudah di jalur yang tepat.',4:'Keren! Pengalamanmu sangat berharga hari ini.',5:'Luar biasa! Tolong sharingkan pengalamanmu ke rekan-rekan!'};
+  showFeedback(null,msgs[v]);
+}
+
+function nextQ(){
+  state.qi++;
+  if(state.qi===6){showCheckpoint('⚡','Ronde 2: Benar atau Salah?','Evaluasi pernyataan tentang Kecerdasan Artifisial dalam pendidikan — mana mitos, mana fakta?','chk1');return;}
+  if(state.qi===10){showCheckpoint('🎯','Ronde 3: Skala Kesiapanmu','Tidak ada benar atau salah — jawab jujur untuk profil yang akurat!','chk2');return;}
+  renderQ();
+}
+
+function showCheckpoint(icon,title,desc,nodeId){
+  const node=NODES.find(n=>n.id===nodeId);
+  if(node)moveChar(node.x);
+  activateNode(nodeId);doneNode(nodeId);
+  document.getElementById('q-ronde-tag').textContent='CHECKPOINT';
+  document.getElementById('q-text').textContent=icon+' '+title;
+  document.getElementById('q-hint').textContent=desc;
+  document.getElementById('opts-area').innerHTML='';
+  document.getElementById('feedback').style.display='none';
+  const btn=document.getElementById('btn-next');
+  btn.textContent='Lanjutkan →';
+  btn.style.display='block';
+  btn.onclick=function(){btn.onclick=function(){nextQ();};renderQ();};
+}
+
+function finishGame(){
+  const endNode=NODES.find(n=>n.id==='end');
+  if(endNode){moveChar(endNode.x);doneNode('end');}
+  setTimeout(()=>{
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.remove('hidden');
+    const maxScore=10*10+4*10+5*5*2;
+    const pct=Math.round(state.score/maxScore*100);
+    const profile=PROFILES.find(p=>pct>=p.min&&pct<=p.max)||PROFILES[0];
+    document.getElementById('res-emoji').textContent=profile.emoji;
+    document.getElementById('res-name').textContent=profile.name;
+    document.getElementById('res-score').textContent=state.score;
+    document.getElementById('res-correct').textContent=state.correct+'/10';
+    document.getElementById('res-level').textContent=profile.level;
+    document.getElementById('res-title').textContent=profile.emoji+' '+profile.name;
+    document.getElementById('res-desc').textContent=profile.desc;
+    const takes=[
+      'Kecerdasan Artifisial bukan pengganti guru — ia alat yang memperkuat dampak pengajaranmu.',
+      'Kecerdasan Artifisial Generatif (ChatGPT dll) bisa membuat konten baru — ini yang paling relevan untuk pendidikan saat ini.',
+      'Kunci sukses: eksplorasi tools Kecerdasan Artifisial dulu, kemudian integrasikan secara bertahap ke kelas.',
+      'Etika, privasi siswa, dan berpikir kritis tetap tanggung jawab guru — bukan Kecerdasan Artifisial.',
+    ];
+    document.getElementById('takeaway-list').innerHTML=takes.map(t=>`<li><i class="ti ti-circle-check" aria-hidden="true"></i>${t}</li>`).join('');
+  },1000);
+}
+
+function startGame(){
+  document.getElementById('intro-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+  buildWorld();
+  const startNode=NODES.find(n=>n.id==='start');
+  document.getElementById('char').style.left=startNode.x+'px';
+  document.getElementById('char-shadow').style.left=startNode.x+'px';
+  renderQ();
+}
+
+function restart(){
+  state={qi:0,score:0,correct:0,scaleSum:0,scaleN:0,answered:false};
+  document.getElementById('result-screen').classList.add('hidden');
+  document.getElementById('intro-screen').classList.remove('hidden');
+}
+
+document.getElementById('btn-next').onclick=function(){nextQ();};
+</script>
